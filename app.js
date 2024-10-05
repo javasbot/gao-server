@@ -1,11 +1,11 @@
 const http = require("http");
 const url = require("url");
-const querystring = require("querystring");
 const mysql = require("mysql2/promise"); // 使用promise版本
-const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const dbConfig = require("./.env.local.js");
+const jwt = require("jsonwebtoken");
 
-// 创建MySQL连接池
+// 创建MySQL连接池，并禁用SSL验证
 const pool = mysql.createPool({
   ...dbConfig,
   waitForConnections: true,
@@ -22,6 +22,53 @@ function sendJsonResponse(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
+// 生成随机盐
+function generateSalt() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// 哈希密码
+async function hashPassword(password, salt) {
+  const iterations = 10000; // 迭代次数
+  const keylen = 64; // 密钥长度
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(
+      password,
+      salt,
+      iterations,
+      keylen,
+      "sha256",
+      (err, derivedKey) => {
+        if (err) reject(err);
+        else resolve(derivedKey.toString("hex"));
+      }
+    );
+  });
+}
+
+// 验证密码
+async function verifyPassword(hashedPassword, password, salt) {
+  const iterations = 10000; // 迭代次数
+  const keylen = 64; // 密钥长度
+  const derivedKey = await new Promise((resolve, reject) => {
+    crypto.pbkdf2(
+      password,
+      salt,
+      iterations,
+      keylen,
+      "sha256",
+      (err, derivedKey) => {
+        if (err) reject(err);
+        else resolve(derivedKey.toString("hex"));
+      }
+    );
+  });
+  return hashedPassword === derivedKey;
+}
+
+// JWT 密钥
+const JWT_SECRET = "#Gao_$gei";
+
 // 创建HTTP服务器
 const server = http.createServer(async (req, res) => {
   // 设置CORS头以允许跨域
@@ -29,7 +76,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // 处理预检请求
+  // 处理预检请求token
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
@@ -47,13 +94,21 @@ const server = http.createServer(async (req, res) => {
   });
 
   req.on("end", async () => {
-    const postData = querystring.parse(body);
-
     try {
+      const postData = JSON.parse(body); // 解析JSON格式的请求体
+      console.log("Received POST data:", postData); // 打印接收到的数据
+
       switch (pathname) {
         case "/user/login":
           if (req.method === "POST") {
             const { username, password } = postData;
+
+            // 确保 username 和 password 都不为 undefined
+            if (!username || !password) {
+              return sendJsonResponse(res, 400, {
+                message: "Username and password are required",
+              });
+            }
 
             // 查询数据库
             const [rows] = await pool.execute(
@@ -62,12 +117,23 @@ const server = http.createServer(async (req, res) => {
             );
             if (rows.length > 0) {
               const user = rows[0];
-              const isPasswordValid = await bcrypt.compare(
+              const isPasswordValid = await verifyPassword(
+                user.password,
                 password,
-                user.password
+                user.salt
               );
               if (isPasswordValid) {
-                sendJsonResponse(res, 200, { message: "Login successful" });
+                // 生成 JWT
+                const token = jwt.sign(
+                  { id: user.id, username: user.username },
+                  JWT_SECRET,
+                  { expiresIn: "1h" }
+                );
+                sendJsonResponse(res, 200, {
+                  username,
+                  message: "Login successful",
+                  token,
+                });
               } else {
                 sendJsonResponse(res, 401, { message: "Invalid credentials" });
               }
@@ -79,18 +145,28 @@ const server = http.createServer(async (req, res) => {
             res.end("Method Not Allowed");
           }
           break;
-        case "/user/registry":
+        case "/user/register":
           if (req.method === "POST") {
-            const { username, password } = postData;
+            const { username, email, password } = postData;
+
+            // 确保 username、email 和 password 都不为 undefined
+            if (!username || !email || !password) {
+              return sendJsonResponse(res, 400, {
+                message: "Username, email, and password are required",
+              });
+            }
+
+            // 生成盐
+            const salt = generateSalt();
 
             // 生成哈希密码
-            const hashedPassword = await bcrypt.hash(password, 10); // 10是盐轮数
+            const hashedPassword = await hashPassword(password, salt);
 
             // 插入到数据库
             try {
               const [result] = await pool.execute(
-                "INSERT INTO users (username, password) VALUES (?, ?)",
-                [username, hashedPassword]
+                "INSERT INTO users (username, email, password, salt) VALUES (?, ?, ?, ?)",
+                [username, email, hashedPassword, salt]
               );
               if (result.affectedRows > 0) {
                 sendJsonResponse(res, 201, {
@@ -105,6 +181,7 @@ const server = http.createServer(async (req, res) => {
               if (err.code === "ER_DUP_ENTRY") {
                 sendJsonResponse(res, 409, { message: "User already exists" });
               } else {
+                console.error(err);
                 sendJsonResponse(res, 500, {
                   message: "Internal Server Error",
                 });

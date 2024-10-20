@@ -1,4 +1,4 @@
-数据库配置在 `.env.config.js`
+数据库配置在 `.env.local.js`
 部署
 `lade deploy -a gaoserver`
 日志

@@ -135,10 +135,10 @@ const server = http.createServer(async (req, res) => {
                   token,
                 });
               } else {
-                sendJsonResponse(res, 401, { message: "Invalid credentials" });
+                sendJsonResponse(res, 401, { message: "账号密码不一致" });
               }
             } else {
-              sendJsonResponse(res, 401, { message: "Invalid credentials" });
+              sendJsonResponse(res, 401, { message: "用户不存在" });
             }
           } else {
             res.writeHead(405, { Allow: "POST" });

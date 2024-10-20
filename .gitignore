@@ -3,6 +3,8 @@
 /node_modules
 /build
 
+/user/githubConfig.js
+
 # Logs
 logs
 *.log

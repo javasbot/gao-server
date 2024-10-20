@@ -4,6 +4,8 @@ const mysql = require("mysql2/promise"); // 使用promise版本
 const crypto = require("crypto");
 const dbConfig = require("./.env.local.js");
 const jwt = require("jsonwebtoken");
+const handleWrite = require("./user/write");
+const handlePost = require("./user/post");
 
 // 创建MySQL连接池，并禁用SSL验证
 const pool = mysql.createPool({
@@ -148,7 +150,6 @@ const server = http.createServer(async (req, res) => {
         case "/user/register":
           if (req.method === "POST") {
             const { username, email, password } = postData;
-
             // 确保 username、email 和 password 都不为 undefined
             if (!username || !email || !password) {
               return sendJsonResponse(res, 400, {
@@ -187,6 +188,22 @@ const server = http.createServer(async (req, res) => {
                 });
               }
             }
+          } else {
+            res.writeHead(405, { Allow: "POST" });
+            res.end("Method Not Allowed");
+          }
+          break;
+        case "/user/write":
+          if (req.method === "POST") {
+            await handleWrite(req, res, postData); // 传递postData给handleWrite
+          } else {
+            res.writeHead(405, { Allow: "POST" });
+            res.end("Method Not Allowed");
+          }
+          break;
+        case "/user/posts":
+          if (req.method === "POST") {
+            await handlePost(req, res, postData); // 传递postData给handlePost
           } else {
             res.writeHead(405, { Allow: "POST" });
             res.end("Method Not Allowed");

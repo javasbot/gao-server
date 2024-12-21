@@ -6,6 +6,7 @@ const dbConfig = require("./.env.local.js");
 const jwt = require("jsonwebtoken");
 const handleWrite = require("./user/write");
 const handlePost = require("./user/post");
+const handlePostDetail = require("./user/postDetail");
 
 // 创建MySQL连接池，并禁用SSL验证
 const pool = mysql.createPool({
@@ -98,8 +99,6 @@ const server = http.createServer(async (req, res) => {
   req.on("end", async () => {
     try {
       const postData = JSON.parse(body); // 解析JSON格式的请求体
-      console.log("Received POST data:", postData); // 打印接收到的数据
-
       switch (pathname) {
         case "/user/login":
           if (req.method === "POST") {
@@ -196,6 +195,14 @@ const server = http.createServer(async (req, res) => {
         case "/user/write":
           if (req.method === "POST") {
             await handleWrite(req, res, postData); // 传递postData给handleWrite
+          } else {
+            res.writeHead(405, { Allow: "POST" });
+            res.end("Method Not Allowed");
+          }
+          break;
+        case "/user/postDetail":
+          if (req.method === "POST") {
+            await handlePostDetail(req, res, postData); // 传递postData给handlePost
           } else {
             res.writeHead(405, { Allow: "POST" });
             res.end("Method Not Allowed");

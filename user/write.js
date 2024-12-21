@@ -1,6 +1,6 @@
 const axios = require("axios");
 const githubConfig = require("./githubConfig");
-
+const { getDirectoryContents, sendJsonResponse } = require("./commonConfig");
 const { GITHUB_TOKEN, REPO_OWNER, REPO_NAME, BRANCH } = githubConfig;
 
 // 设置超时时间
@@ -8,31 +8,8 @@ const axiosInstance = axios.create({
   timeout: 10000, // 10秒超时
 });
 
-const getDirectoryContents = async (path) => {
-  try {
-    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`;
-    console.log("看看url", url);
-    const response = await axiosInstance.get(url, {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      console.log("目录不存在:", path);
-      return undefined;
-    }
-    // console.error(
-    //   "Error in getDirectoryContents:",
-    //   error.response ? error.response.data : error.message
-    // );
-    throw error;
-  }
-};
-
 const createOrUpdateFile = async (path, content, message) => {
-  console.log('创建')
+  console.log("创建");
   const existingContent = await getDirectoryContents(path);
   let sha = null;
 
@@ -101,13 +78,6 @@ const handleWrite = async (req, res, postData) => {
     // 将文章保存到 GitHub
     await createOrUpdateFile(path, content, `Add ${title} article`);
 
-    // 记录保存到数据库（这里只是打印日志）
-    // console.log("Article saved to GitHub:", {
-    //   category,
-    //   title,
-    //   link: `https://github.com/${REPO_OWNER}/${REPO_NAME}/blob/${BRANCH}/${path}`,
-    // });
-
     // 发送成功响应
     sendJsonResponse(res, 200, {
       success: true,
@@ -121,11 +91,5 @@ const handleWrite = async (req, res, postData) => {
     });
   }
 };
-
-// 发送JSON响应的辅助函数
-function sendJsonResponse(res, statusCode, data) {
-  res.writeHead(statusCode, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(data));
-}
 
 module.exports = handleWrite;

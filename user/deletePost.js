@@ -5,7 +5,6 @@ const { GITHUB_TOKEN, REPO_OWNER, REPO_NAME } = githubConfig;
 
 // 删除文章
 async function deletePost(req, res, { url }) {
-  console.log("url", url);
   try {
     // 获取文件的 SHA，用于删除文件
     const fileInfo = await getDirectoryContents(url);
@@ -28,7 +27,7 @@ async function deletePost(req, res, { url }) {
     // 返回成功响应
     return sendJsonResponse(res, 200, {
       message: `${url}删除成功`,
-      data: response.data,
+      success: true,
     });
   } catch (error) {
     console.error(error);

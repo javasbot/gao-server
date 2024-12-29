@@ -11,13 +11,11 @@ const axiosInstance = axios.create({
 const getDirectoryContents = async (path) => {
   try {
     const fullPath = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`;
-    console.log('getDirectoryContents的fullPath', fullPath)
     const response = await axiosInstance.get(fullPath, {
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
       },
     });
-    console.log('getDirectoryContents的response', response.data)
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 404) {

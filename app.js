@@ -5,8 +5,10 @@ const crypto = require("crypto");
 const dbConfig = require("./.env.local.js");
 const jwt = require("jsonwebtoken");
 const handleWrite = require("./user/write");
-const handlePost = require("./user/post");
+const { sendJsonResponse } = require("./user/commonConfig");
+const getPostList = require("./user/postList.js");
 const handlePostDetail = require("./user/postDetail");
+const handleDeletePost = require("./user/deletePost");
 
 // 创建MySQL连接池，并禁用SSL验证
 const pool = mysql.createPool({
@@ -18,13 +20,6 @@ const pool = mysql.createPool({
     rejectUnauthorized: false, // 禁用SSL证书验证
   },
 });
-
-// 发送JSON响应的辅助函数
-function sendJsonResponse(res, statusCode, data) {
-  res.writeHead(statusCode, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(data));
-}
-
 // 生成随机盐
 function generateSalt() {
   return crypto.randomBytes(32).toString("hex");
@@ -70,7 +65,7 @@ async function verifyPassword(hashedPassword, password, salt) {
 }
 
 // JWT 密钥
-const JWT_SECRET = "#Gao_$gei";
+const JWT_SECRET = "#Gao_2024-better";
 
 // 创建HTTP服务器
 const server = http.createServer(async (req, res) => {
@@ -210,12 +205,22 @@ const server = http.createServer(async (req, res) => {
           break;
         case "/user/posts":
           if (req.method === "POST") {
-            await handlePost(req, res, postData); // 传递postData给handlePost
+            await getPostList(req, res, postData); // 传递postData给handlePost
           } else {
             res.writeHead(405, { Allow: "POST" });
             res.end("Method Not Allowed");
           }
           break;
+        // 删除文章
+        case "/user/deletePost":
+          if (req.method === "POST") {
+            await handleDeletePost(req, res, postData); // 传递postData给handlePost
+          } else {
+            res.writeHead(405, { Allow: "POST" });
+            res.end("Method Not Allowed");
+          }
+          break;
+        // end
         default:
           res.writeHead(404);
           res.end("Not Found");

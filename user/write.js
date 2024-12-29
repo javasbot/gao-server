@@ -9,7 +9,6 @@ const axiosInstance = axios.create({
 });
 
 const createOrUpdateFile = async (path, content, message) => {
-  console.log("创建");
   const existingContent = await getDirectoryContents(path);
   let sha = null;
 
@@ -23,7 +22,7 @@ const createOrUpdateFile = async (path, content, message) => {
   const encodedContent = Buffer.from(content).toString("base64");
 
   try {
-    const response = await axiosInstance.put(
+    await axiosInstance.put(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,
       {
         message,
@@ -37,7 +36,6 @@ const createOrUpdateFile = async (path, content, message) => {
         },
       }
     );
-    console.log("Response from 新建结构:", response.data);
   } catch (error) {
     console.error(
       "新建报错:",

@@ -1,4 +1,4 @@
-// post.js
+// 获取文章列表
 const { getDirectoryContents, sendJsonResponse } = require("./commonConfig");
 
 const handlePost = async (req, res, postData) => {
@@ -14,12 +14,11 @@ const handlePost = async (req, res, postData) => {
       return;
     }
 
-    console.log('contents', contents)
     const articles = contents
       .filter((item) => item.type === "file")
       .map((item) => ({
         title: item.name.replace(".md", ""),
-        link: item.html_url,
+        path: item.path,
         download_url: item.download_url
       }));
 

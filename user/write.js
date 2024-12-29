@@ -11,12 +11,9 @@ const axiosInstance = axios.create({
 const createOrUpdateFile = async (path, content, message) => {
   const existingContent = await getDirectoryContents(path);
   let sha = null;
-
+  console.log('content', content);
   if (existingContent) {
-    const file = existingContent.find((item) => item.name === "README.md");
-    if (file) {
-      sha = file.sha;
-    }
+    sha = existingContent.sha;
   }
 
   const encodedContent = Buffer.from(content).toString("base64");
